@@ -92,7 +92,7 @@
     <script>
         // إعدادات اتصال Supabase الخاصة بك
         const SUPABASE_URL = 'https://ddkppnnrcwdmykzjnwooz.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRka3BwbnJjd2RteWt6am53b296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NTg3MzQsImV4cCI6MjEwNDUzNDczNH0.vKdnZAmmMWqr3fCRZ25Y9hKlNllZmG7lP83BK3QhPvM'; // انسخه من إعدادات مشروعك في Supabase (API keys)
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRka3BwbnJjd2RteWt6am53b296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NTg3MzQsImV4cCI6MjEwNDUzNDczNH0.vKdnZAmmMWqr3fCRZ25Y9hKlNllZmG7lP83BK3QhPvM';
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -111,7 +111,7 @@
                 
                 const fileName = Date.now() + '_' + file.name;
                 const { error } = await supabaseClient.storage
-                    .from('files')
+                    .from('files') // المطابقة بالحروف الصغرى الصحيحة
                     .upload(fileName, file);
 
                 if (error) {
@@ -120,15 +120,16 @@
                 } else {
                     statusEl.innerText = "تم الرفع بنجاح!";
                     setTimeout(() => statusEl.innerText = "متصل بالسحاب بنجاح!", 3000);
+                    fetchFiles();
                 }
             }
-            fileInput.value = ''; // إعادة تعيين الحقل
+            fileInput.value = '';
         });
 
         // جلب الملفات المتاحة سحابياً وعرضها
         async function fetchFiles() {
             const { data, error } = await supabaseClient.storage
-                .from('files')
+                .from('files') // المطابقة بالحروف الصغرى الصحيحة
                 .list();
 
             if (data) {
@@ -137,10 +138,9 @@
                     if (file.name === '.emptyFolderPlaceholder') return;
 
                     const { data: publicURL } = supabaseClient.storage
-                        .from('files')
+                        .from('files') // المطابقة بالحروف الصغرى الصحيحة
                         .getPublicUrl(file.name);
 
-                    // استخراج الاسم الحقيقي للملف (بعد إزالة التوقيت الزمني)
                     const originalName = file.name.substring(file.name.indexOf('_') + 1);
 
                     const li = document.createElement('li');
@@ -154,19 +154,6 @@
             }
         }
 
-        // تفعيل التحديث الفوري (Realtime) من داخل الموقع
-        supabaseClient
-            .channel('storage-changes')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'storage', table: 'objects' },
-                () => {
-                    fetchFiles(); // يتم إعادة جلب الملفات تلقائياً وحالياً فور حدوث أي رفع أو حذف
-                }
-            )
-            .subscribe();
-
-        // جلب الملفات عند فتح الصفحة لأول مرة
         fetchFiles();
     </script>
 </body>
