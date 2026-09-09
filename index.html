@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نقل الملفات السحابي</title>
+    <title>نقل الملفات السحابي الفوري</title>
     <!-- استدعاء مكتبة Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -78,7 +78,7 @@
 <body>
 
     <div class="container">
-        <h2>نقل الملفات السحابي الحقيقي</h2>
+        <h2>نقل الملفات السحابي الفوري</h2>
         <p id="status">جاري الاتصال بالسيرفر...</p>
         
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -91,7 +91,7 @@
 
     <script>
         // إعدادات اتصال Supabase الخاصة بك
-        const SUPABASE_URL = 'https://ddkppnnrcwdmykzjnwooz.supabase.co'; // رابط مشروعك الظاهر في الصورة
+        const SUPABASE_URL = 'https://ddkppnnrcwdmykzjnwooz.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRka3BwbnJjd2RteWt6am53b296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NTg3MzQsImV4cCI6MjEwNDUzNDczNH0.vKdnZAmmMWqr3fCRZ25Y9hKlNllZmG7lP83BK3QhPvM'; // انسخه من إعدادات مشروعك في Supabase (API keys)
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -110,35 +110,37 @@
                 statusEl.innerText = `جاري رفع ${file.name}...`;
                 
                 const fileName = Date.now() + '_' + file.name;
-                const { data, error } = await supabaseClient.storage
+                const { error } = await supabaseClient.storage
                     .from('files')
                     .upload(fileName, file);
 
                 if (error) {
                     alert('خطأ في الرفع: ' + error.message);
+                    statusEl.innerText = "فشل الرفع!";
                 } else {
                     statusEl.innerText = "تم الرفع بنجاح!";
-                    fetchFiles(); // تحديث القائمة فوراً
+                    setTimeout(() => statusEl.innerText = "متصل بالسحاب بنجاح!", 3000);
                 }
             }
+            fileInput.value = ''; // إعادة تعيين الحقل
         });
 
-        // جلب الملفات المتاحة سحابياً
+        // جلب الملفات المتاحة سحابياً وعرضها
         async function fetchFiles() {
-            fileList.innerHTML = '';
             const { data, error } = await supabaseClient.storage
                 .from('files')
                 .list();
 
             if (data) {
+                fileList.innerHTML = '';
                 data.forEach((file) => {
                     if (file.name === '.emptyFolderPlaceholder') return;
 
-                    // الحصول على الرابط العام للتحميل
                     const { data: publicURL } = supabaseClient.storage
                         .from('files')
                         .getPublicUrl(file.name);
 
+                    // استخراج الاسم الحقيقي للملف (بعد إزالة التوقيت الزمني)
                     const originalName = file.name.substring(file.name.indexOf('_') + 1);
 
                     const li = document.createElement('li');
@@ -152,7 +154,19 @@
             }
         }
 
-        // جلب الملفات عند فتح الموقع
+        // تفعيل التحديث الفوري (Realtime) من داخل الموقع
+        supabaseClient
+            .channel('storage-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'storage', table: 'objects' },
+                () => {
+                    fetchFiles(); // يتم إعادة جلب الملفات تلقائياً وحالياً فور حدوث أي رفع أو حذف
+                }
+            )
+            .subscribe();
+
+        // جلب الملفات عند فتح الصفحة لأول مرة
         fetchFiles();
     </script>
 </body>
