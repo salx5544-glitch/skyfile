@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نقل الملفات السحابي</title>
+    <!-- استدعاء مكتبة Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h2 { color: var(--accent-color); margin-bottom: 20px; }
+        .drop-zone {
+            border: 2px dashed var(--accent-color);
+            border-radius: 12px;
+            padding: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-bottom: 20px;
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .drop-zone:hover { background: rgba(56, 189, 248, 0.1); }
+        input[type="file"] { display: none; }
+        .file-list {
+            text-align: right;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+            padding: 0;
+            list-style: none;
+        }
+        .file-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-item a {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            padding: 5px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        #status { font-size: 14px; margin-bottom: 10px; color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>نقل الملفات السحابي الحقيقي</h2>
+        <p id="status">جاري الاتصال بالسيرفر...</p>
+        
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <p>اختر ملفاً لرفعه سحابياً</p>
+            <input type="file" id="fileInput" multiple>
+        </div>
+
+        <ul class="file-list" id="fileList"></ul>
+    </div>
+
+    <script>
+        // إعدادات اتصال Supabase الخاصة بك
+        const SUPABASE_URL = 'https://ddkppnnrcwdmykzjnwooz.supabase.co'; // رابط مشروعك الظاهر في الصورة
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRka3BwbnJjd2RteWt6am53b296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NTg3MzQsImV4cCI6MjEwNDUzNDczNH0.vKdnZAmmMWqr3fCRZ25Y9hKlNllZmG7lP83BK3QhPvM'; // انسخه من إعدادات مشروعك في Supabase (API keys)
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const statusEl = document.getElementById('status');
+
+        statusEl.innerText = "متصل بالسحاب بنجاح!";
+
+        // رفع الملف عند اختياره
+        fileInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            for (let file of files) {
+                statusEl.innerText = `جاري رفع ${file.name}...`;
+                
+                const fileName = Date.now() + '_' + file.name;
+                const { data, error } = await supabaseClient.storage
+                    .from('files')
+                    .upload(fileName, file);
+
+                if (error) {
+                    alert('خطأ في الرفع: ' + error.message);
+                } else {
+                    statusEl.innerText = "تم الرفع بنجاح!";
+                    fetchFiles(); // تحديث القائمة فوراً
+                }
+            }
+        });
+
+        // جلب الملفات المتاحة سحابياً
+        async function fetchFiles() {
+            fileList.innerHTML = '';
+            const { data, error } = await supabaseClient.storage
+                .from('files')
+                .list();
+
+            if (data) {
+                data.forEach((file) => {
+                    if (file.name === '.emptyFolderPlaceholder') return;
+
+                    // الحصول على الرابط العام للتحميل
+                    const { data: publicURL } = supabaseClient.storage
+                        .from('files')
+                        .getPublicUrl(file.name);
+
+                    const originalName = file.name.substring(file.name.indexOf('_') + 1);
+
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `
+                        <span>${originalName}</span>
+                        <a href="${publicURL.publicUrl}" target="_blank" download>تحميل</a>
+                    `;
+                    fileList.appendChild(li);
+                });
+            }
+        }
+
+        // جلب الملفات عند فتح الموقع
+        fetchFiles();
+    </script>
+</body>
+</html>
