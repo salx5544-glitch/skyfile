@@ -126,35 +126,35 @@
             fileInput.value = '';
         });
 
-       // جلب الملفات المتاحة سحابياً وعرضها
-async function fetchFiles() {
-    const { data, error } = await supabaseClient.storage
-        .from('FILES') // مطابقة للحروف الكبيرة في لوحة التحكم
-        .list();
+        // جلب الملفات المتاحة سحابياً وعرضها
+        async function fetchFiles() {
+            const { data, error } = await supabaseClient.storage
+                .from('files') // تعديلها لتصبح بالحروف الصغرى المطابقة للوحة التحكم
+                .list();
 
-    if (data) {
-        fileList.innerHTML = '';
-        data.forEach((file) => {
-            if (file.name === '.emptyFolderPlaceholder') return;
+            if (data) {
+                fileList.innerHTML = '';
+                data.forEach((file) => {
+                    if (file.name === '.emptyFolderPlaceholder') return;
 
-            const { data: publicURL } = supabaseClient.storage
-                .from('FILES')
-                .getPublicUrl(file.name);
+                    const { data: publicURL } = supabaseClient.storage
+                        .from('files') // تعديلها لتصبح بالحروف الصغرى
+                        .getPublicUrl(file.name);
 
-            const originalName = file.name.substring(file.name.indexOf('_') + 1);
+                    const originalName = file.name.substring(file.name.indexOf('_') + 1);
 
-            const li = document.createElement('li');
-            li.className = 'file-item';
-            li.innerHTML = `
-                <span>${originalName}</span>
-                <a href="${publicURL.publicUrl}" target="_blank" download>تحميل</a>
-            `;
-            fileList.appendChild(li);
-        });
-    }
-}
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `
+                        <span>${originalName}</span>
+                        <a href="${publicURL.publicUrl}" target="_blank" download>تحميل</a>
+                    `;
+                    fileList.appendChild(li);
+                });
+            }
+        }
 
-fetchFiles();
+        fetchFiles();
     </script>
 </body>
 </html>
